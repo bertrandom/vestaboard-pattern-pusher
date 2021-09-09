@@ -60,7 +60,7 @@ async function getAccessToken(refreshToken) {
         uri: 'https://vestaboard.auth0.com/oauth/token',
         form: {
             grant_type: 'refresh_token',
-            client_id: 'uIMhzzLyu9GJtQTf5VIU7QTBNdNSuVvM',
+            client_id: config.client_id,
             refresh_token: refreshToken,
         },
         json: true,
