@@ -1,0 +1,7 @@
+.DS_Store
+node_modules
+package-lock.json
+config/local.json5
+config/virtual.json5
+config/prod.json5
+sftp-config.json
