@@ -48,7 +48,17 @@ async function getPattern(token, personId) {
         }
     })).then((body) => {
 
-        return body.data.recommendations[1].automation.message.formatted;
+        var selected = 0;
+
+        for (var i = 0; i < body.data.recommendations.length; i++) {
+            var text = body.data.recommendations[i].automation.message.text;
+            if (text.indexOf('{') > -1 && text.indexOf('}') > -1) {
+                selected = i;
+                break;
+            }
+        }
+
+        return body.data.recommendations[i].automation.message.formatted;
 
     });
 
