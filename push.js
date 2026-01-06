@@ -52,7 +52,8 @@ async function getPattern(token, personId) {
 
         for (var i = 0; i < body.data.recommendations.length; i++) {
             var text = body.data.recommendations[i].automation.message.text;
-            if (text.indexOf('{') > -1 && text.indexOf('}') > -1) {
+            var formatted = body.data.recommendations[i].automation.message.formatted;
+            if (text != null && formatted.length > 3 && text.indexOf('{') > -1 && text.indexOf('}') > -1) {
                 selected = i;
                 break;
             }
