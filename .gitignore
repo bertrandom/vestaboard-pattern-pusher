@@ -6,3 +6,4 @@ config/actual.json5
 config/virtual.json5
 config/prod.json5
 sftp-config.json
+.vscode/sftp.json
