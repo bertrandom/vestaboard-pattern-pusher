@@ -4,14 +4,10 @@ var rp = require('request-promise-native');
 function getGraphRequest(token, body) {
 
     return {
-        uri: 'https://platform.vestaboard.com/graphql',
+        uri: 'https://api.vestaboard.com/graphql',
         headers: {
             'x-vestaboard-token': token,
-            'apollographql-client-version': '1.10-161',
-            'user-agent': 'Vestaboard/161 CFNetwork/1240.0.4 Darwin/20.6.0',
-            'x-apollo-operation-type': 'query',
-            'apollographql-client-name': 'com.vestaboard.Vestaboard-apollo-ios',
-            'x-apollo-operation-name': 'Viewer',
+            'user-agent': 'Vestaboard/804 CFNetwork/3860.400.51 Darwin/25.3.0',
         },
         json: true,
         body: body
@@ -19,47 +15,51 @@ function getGraphRequest(token, body) {
 
 }
 
-async function getPersonId(token) {
+async function getPattern(token) {
 
     return rp.post(getGraphRequest(token, {
-        "operationName": "Viewer",
-        "query": "query Viewer($page: Int!, $perPage: Int!) {\n  viewer {\n    __typename\n    id\n    account {\n      __typename\n      emailAddress\n      person {\n        __typename\n        avatar\n        firstName\n        lastName\n        id\n        tenants {\n          __typename\n          id\n          boards {\n            __typename\n            id\n            title\n            history(page: $page, perPage: $perPage) {\n              __typename\n              id\n              message {\n                __typename\n                created\n                text\n                id\n                authorFormatted\n              }\n            }\n            devices {\n              __typename\n              id\n            }\n          }\n          ... on PersonTenant {\n            id\n            members {\n              __typename\n              id\n              created\n              isCurrentMember\n              invitationStatus\n              person {\n                __typename\n                id\n                firstName\n                lastName\n                account {\n                  __typename\n                  emailAddress\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+        "operationName": "ListInspiration",
         "variables": {
-            "page": 0,
-            "perPage": 1
-        }
-    })).then((body) => {
-
-        var personId = body.data.viewer.account.person.id;
-        return personId;
-
-    });
-
-}
-
-async function getPattern(token, personId) {
-
-    return rp.post(getGraphRequest(token, {
-        "operationName": "Automation",
-        "query": "query Automation($limit: Int!, $personId: String!) {\n  recommendations(limit: $limit) {\n    __typename\n    automation {\n      __typename\n      message {\n        __typename\n        created\n        id\n        isFavorite(person: $personId)\n        formatted\n        text\n        authorFormatted\n      }\n    }\n  }\n}",
-        "variables": {
-            "limit": 10,
-            "personId": personId,
-        }
+            "input": {
+                "limit": 12,
+                "cursor": null,
+                "boardStyle": "black"
+            }
+        },
+        "query": "query ListInspiration($input: ListInspirationInputV2!) {\n  listInspirationV2(input: $input) {\n    items {\n      id\n      pick {\n        id\n        date\n        created\n        attribution\n        likeCount\n        isLikedByMe\n        mediumIcon: icon(size: Medium)\n        message {\n          id\n          characters\n          isFavorited\n          __typename\n        }\n        __typename\n      }\n      feedItem {\n        id\n        created\n        attribution\n        likeCount\n        isLikedByMe\n        personId\n        mediumIcon: icon(size: Medium)\n        message {\n          id\n          characters\n          isFavorited\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    nextCursor\n    __typename\n  }\n}"
     })).then((body) => {
 
         var selected = 0;
 
-        for (var i = 0; i < body.data.recommendations.length; i++) {
-            var text = body.data.recommendations[i].automation.message.text;
-            var formatted = body.data.recommendations[i].automation.message.formatted;
-            if (text != null && formatted.length > 3 && text.indexOf('{') > -1 && text.indexOf('}') > -1) {
+        for (var i = 0; i < body.data.listInspirationV2.items.length; i++) {
+
+            var msg_char_array = body.data.listInspirationV2.items[i].pick.message.characters;
+
+            // This is a pick for the Vestaboard Note because it only has 3 lines, skip it...
+            if (msg_char_array.length <= 3) {
+                continue;
+            }
+
+            // If it contains text (A-Z, 0-9), then it's also invalid...
+            var valid = true;
+
+            for (const row of msg_char_array) {
+                for (const char of row) {
+                    if (char >= 1 && char <= 36) {
+                        valid = false;
+                    }
+                }
+            }
+
+            // But let's return the first valid one we find
+            if (valid) {
                 selected = i;
                 break;
             }
+
         }
 
-        return body.data.recommendations[i].automation.message.formatted;
+        return body.data.listInspirationV2.items[selected].pick.message.characters;
 
     });
 
@@ -103,10 +103,7 @@ async function pushToVestaboard(apiKey, apiSecret, subscriptionId, pattern) {
 (async function() {
 
     var accessToken = await getAccessToken(config.refresh_token);
-
-    var personId = await getPersonId(accessToken);
-    var pattern = await getPattern(accessToken, personId);
-
+    var pattern = await getPattern(accessToken);
     await pushToVestaboard(config.api_key, config.api_secret, config.subscription_id, pattern);
 
 }());
